@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chemistry Craft Hybrid</title>
+<style>
+  body { margin:0; font-family:sans-serif; background:#f5f5f5; }
+  #gameCanvas { border:1px solid #333; display:block; margin:0 auto; background:#fff; }
+  #inventory { position:absolute; left:10px; top:10px; width:180px; }
+  .item { width:50px; height:50px; margin:5px; background:#ccc; text-align:center; line-height:50px; cursor:pointer; user-select:none; }
+  #clearBtn { position:absolute; right:10px; top:10px; width:100px; height:40px; background:#f88; text-align:center; line-height:40px; cursor:pointer; }
+  #message { position:absolute; bottom:10px; width:100%; text-align:center; font-weight:bold; }
+</style>
+</head>
+<body>
+
+<div id="inventory"></div>
+<div id="clearBtn">Clear All</div>
+<canvas id="gameCanvas" width="1000" height="600"></canvas>
+<div id="message"></div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const inventoryDiv = document.getElementById('inventory');
+const clearBtn = document.getElementById('clearBtn');
+const messageDiv = document.getElementById('message');
+
+let elements = {
+    "H": {name:"Hydrogen"},
+    "O": {name:"Oxygen"},
+    "C": {name:"Carbon"},
+    "N": {name:"Nitrogen"},
+    "Na": {name:"Sodium"},
+    "Cl": {name:"Chlorine"}
+};
+
+let predefinedReactions = {
+    "H+H+O":"H₂O",
+    "C+O+O":"CO₂",
+    "N+H+H+H":"NH₃",
+    "Na+Cl":"NaCl",
+    "H+Cl":"HCl"
+};
+
+let onScreenElements = [];
+let dragging = null;
+
+// Draw inventory
+function renderInventory() {
+    inventoryDiv.innerHTML = "<strong>Elements</strong><br>";
+    for (let symbol in elements) {
+        let div = document.createElement('div');
+        div.className = "item";
+        div.textContent = symbol;
+        div.draggable = true;
+        div.addEventListener('dragstart', e => dragging = {symbol, type:'element'});
+        inventoryDiv.appendChild(div);
+    }
+}
+
+// Clear all
+clearBtn.addEventListener('click', () => {
+    onScreenElements = [];
+    messageDiv.textContent = "Screen cleared!";
+});
+
+// Handle canvas drops
+canvas.addEventListener('dragover', e=>e.preventDefault());
+canvas.addEventListener('drop', e => {
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    if(dragging) {
+        onScreenElements.push({symbol: dragging.symbol, x, y});
+        checkReactions();
+        dragging = null;
+    }
+});
+
+// Draw loop
+function draw() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    onScreenElements.forEach(el=>{
+        ctx.fillStyle = "#3498db";
+        ctx.fillRect(el.x-25, el.y-25, 50, 50);
+        ctx.fillStyle = "#fff";
+        ctx.font = "20px sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(el.symbol, el.x, el.y);
+    });
+    requestAnimationFrame(draw);
+}
+
+// Simple reaction check
+function checkReactions() {
+    let symbols = onScreenElements.map(e=>e.symbol);
+    let sortedSymbols = symbols.sort().join('+');
+    if(predefinedReactions[sortedSymbols]) {
+        let product = predefinedReactions[sortedSymbols];
+        onScreenElements = [{symbol:product, x:500, y:300}];
+        messageDiv.textContent = `Reaction: ${product} formed!`;
+    } else if(symbols.length>1) {
+        // Could use GPT API here for complex reactions
+        messageDiv.textContent = "Invalid combination!";
+        setTimeout(()=>messageDiv.textContent="",2000);
+    }
+}
+
+// Initial render
+renderInventory();
+draw();
+</script>
+
+</body>
+</html>
